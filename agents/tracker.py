@@ -19,5 +19,5 @@ class KifayatiMetrics:
             "Timestamp": time.strftime("%H:%M:%S")
         })
 
-# Global tracker
+
 metrics_tracker = KifayatiMetrics()
