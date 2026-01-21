@@ -6,10 +6,10 @@ from agents.agent import KifayatiRouter
 # 1. Page Configuration
 st.set_page_config(page_title="Kifayati AI Agent", page_icon="💰", layout="wide")
 
-st.title("💰 Kifayati AI: Cost-Optimized Agent")
+st.title(" Kifayati AI: Cost-Optimized Agent")
 st.markdown("### Hybrid Architecture: Gemma 3 (Local/Edge) + Gemini 2.5 (Cloud)")
 
-# 2. Initialize Session States for Caching & Dashboard
+# 2. Initialise Session States for Caching & Dashboard
 if "router" not in st.session_state:
     st.session_state.router = KifayatiRouter()
 if "messages" not in st.session_state:
