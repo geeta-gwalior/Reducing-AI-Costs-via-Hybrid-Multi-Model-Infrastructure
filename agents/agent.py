@@ -4,7 +4,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 from .config import PROJECT_ID, LOCATION, GEMMA_ENDPOINT_ID, SIMPLE_KEYWORDS
 
-# Initialize Vertex AI
+# Initialise Vertex AI
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 
 # --- 1. DEFINE AGENT CLASS (ADK Style Wrapper) ---
@@ -64,7 +64,7 @@ class KifayatiRouter:
 
         # Step A: Cache Check
         if query_key in self.cache:
-            return f"🚀 [CACHE HIT]: {self.cache[query_key]}"
+            return f" [CACHE HIT]: {self.cache[query_key]}"
 
         # Step B: Routing Logic
         is_simple = any(word in query_key for word in SIMPLE_KEYWORDS) or len(user_input.split()) < 5
@@ -73,7 +73,7 @@ class KifayatiRouter:
             print(f"📉 [ROUTING]: Low Cost -> Gemma 3:4b")
             response = self.gemma_agent.ask(user_input)
         else:
-            print(f"🧠 [ROUTING]: High Logic -> Gemini 2.5 Flash")
+            print(f" [ROUTING]: High Logic -> Gemini 2.5 Flash")
             response = self.gemini_agent.ask(user_input)
 
         # Step C: Save to Cache
