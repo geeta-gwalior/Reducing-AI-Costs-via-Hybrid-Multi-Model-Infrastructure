@@ -1,0 +1,10 @@
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Sensitive environment variables
+.env
+
+# Streamlit logs
+.streamlit/

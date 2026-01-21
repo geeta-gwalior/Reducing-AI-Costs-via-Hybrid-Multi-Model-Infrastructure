@@ -1,0 +1,5 @@
+FastAPI
+Uvicorn
+Pydantic
+google-cloud-aiplatform
+python-dotenv
