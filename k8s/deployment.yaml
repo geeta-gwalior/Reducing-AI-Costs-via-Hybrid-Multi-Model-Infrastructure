@@ -1,0 +1,104 @@
+# ── Namespace ────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kifayati
+---
+# ── Deployment ───────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kifayati-app
+  namespace: kifayati
+  labels:
+    app: kifayati
+    version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kifayati
+  template:
+    metadata:
+      labels:
+        app: kifayati
+    spec:
+      serviceAccountName: kifayati-sa   # Workload Identity — no key files needed
+
+      containers:
+        - name: kifayati
+          image: gcr.io/YOUR_PROJECT_ID/kifayati:latest   # replace with your project
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: kifayati-secrets
+                  key: project_id
+            - name: LOCATION
+              value: "us-central1"
+            - name: GEMMA_ENDPOINT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: kifayati-secrets
+                  key: gemma_endpoint_id
+
+          resources:
+            requests:
+              cpu:    "250m"
+              memory: "512Mi"
+            limits:
+              cpu:    "1000m"
+              memory: "1Gi"
+
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+# ── Horizontal Pod Autoscaler ────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kifayati-hpa
+  namespace: kifayati
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kifayati-app
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+---
+# ── Service ──────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: kifayati-service
+  namespace: kifayati
+spec:
+  selector:
+    app: kifayati
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer

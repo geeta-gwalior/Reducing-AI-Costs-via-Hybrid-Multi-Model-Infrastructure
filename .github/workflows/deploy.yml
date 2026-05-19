@@ -1,0 +1,89 @@
+name: CI/CD → GKE Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PROJECT_ID:  ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: kifayati-cluster
+  GKE_ZONE:    us-central1-a
+  IMAGE:       gcr.io/${{ secrets.GCP_PROJECT_ID }}/kifayati
+
+jobs:
+  # ── 1. Tests ───────────────────────────────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -r requirements.txt pytest pytest-cov
+
+      - name: Run unit tests
+        run: pytest tests/ -v --cov=agents --cov-report=term-missing
+
+  # ── 2. Build & Push Image ──────────────────────────────────────
+  build:
+    name: Build Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build and push image
+        run: |
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+  # ── 3. Deploy to GKE ──────────────────────────────────────────
+  deploy:
+    name: Deploy to GKE
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location:     ${{ env.GKE_ZONE }}
+
+      - name: Deploy to GKE
+        run: |
+          # Update image tag to the new SHA
+          kubectl set image deployment/kifayati-app \
+            kifayati=$IMAGE:${{ github.sha }} \
+            -n kifayati
+
+          # Wait for rollout
+          kubectl rollout status deployment/kifayati-app -n kifayati --timeout=120s
+
+      - name: Verify deployment
+        run: kubectl get pods -n kifayati
